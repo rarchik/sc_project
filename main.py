@@ -14,7 +14,7 @@ con = pymysql.connect(host='localhost',
 
 cur = con.cursor()
 
-vk = vk_api.VkApi(token="a25f65f55b5c38e34da681eadae56528857c0b2603fb05f47a2531442eeff059e8e398608c77ae0ee22b4")
+vk = vk_api.VkApi(token="")
 
 keyboard1 = VkKeyboard(one_time=True)
 
