@@ -57,7 +57,7 @@ keyboard3 = VkKeyboard(one_time=True)
 keyboard3.add_button('Сменить класс.', color=VkKeyboardColor.POSITIVE)
 keyboard3.add_button('Расписание(на доработке).', color=VkKeyboardColor.PRIMARY)
 keyboard3.add_line()
-keyboard1.add_button('Отключить уведомления.', color=VkKeyboardColor.NEGATIVE)
+keyboard3.add_button('Отключить уведомления.', color=VkKeyboardColor.NEGATIVE)
 
 keyboard3 = keyboard3.get_keyboard()
 
