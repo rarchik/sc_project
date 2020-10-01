@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+#!/usr/bin/python3
+
+
 import vk_api
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 import datetime
@@ -51,7 +55,9 @@ keyboard2 = keyboard2.get_keyboard()
 keyboard3 = VkKeyboard(one_time=True)
 
 keyboard3.add_button('Сменить класс.', color=VkKeyboardColor.POSITIVE)
-keyboard3.add_button('Расписание(на доработке).', color=VkKeyboardColor.NEGATIVE)
+keyboard3.add_button('Расписание(на доработке).', color=VkKeyboardColor.PRIMARY)
+keyboard3.add_line()
+keyboard1.add_button('Отключить уведомления.', color=VkKeyboardColor.NEGATIVE)
 
 keyboard3 = keyboard3.get_keyboard()
 
@@ -116,6 +122,12 @@ while True:
 
 					elif body == 'Расписание(на доработке).':
 						vk.method("messages.send", {"peer_id": id, "message": 'На доработке...', 'keyboard': keyboard3, 'random_id':0})
+
+					elif body == 'Отключить уведомления.':
+						# SELECT `id` FROM `uch` WHERE `klas` = '5k' and `send` = 0
+						cur.execute("UPDATE `uch` SET `send`= 1 WHERE `id` = {}".format(id))
+						con.commit()
+
 					else:
 						vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': keyboard3, 'random_id':0})
 
@@ -143,7 +155,7 @@ while True:
 						ans.update([(i, a)])
 				
 				for i in ans.keys():
-					cur.execute("SELECT `id` FROM `uch` WHERE `klas` = '{}'".format(i))
+					cur.execute("SELECT `id` FROM `uch` WHERE `klas` = '{}' and `send` = 0".format(i))
 
 					for t in cur.fetchall():
 						vk.method("messages.send", {"peer_id": t['id'], "message": ans[i], 'keyboard': keyboard3, 'random_id':0})
