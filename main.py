@@ -61,6 +61,15 @@ keyboard3.add_button('Отключить уведомления.', color=VkKeybo
 
 keyboard3 = keyboard3.get_keyboard()
 
+keyboard4 = VkKeyboard(one_time=True)
+
+keyboard4.add_button('Сменить класс.', color=VkKeyboardColor.POSITIVE)
+keyboard4.add_button('Расписание(на доработке).', color=VkKeyboardColor.PRIMARY)
+keyboard4.add_line()
+keyboard4.add_button('Включить уведомления.', color=VkKeyboardColor.POSITIVE)
+
+keyboard4 = keyboard3.get_keyboard()
+
 kl = {'5Д':'5d', '5Л':'5l', '5К':'5k',
 	  '6К':'6k', '6Л':'6l',
 	  '7К':'7k', '7Л':'7l',
@@ -90,7 +99,7 @@ while True:
 				num = cur.fetchall()
 				num = num[-1]['num'] + 1
 
-				cur.execute("INSERT INTO `uch`(`num`, `id`, `name`, `klas`) VALUES ({}, {}, '{}', '{}')".format(num, id, h[0]['first_name']+' '+h[0]['last_name'], '-'))
+				cur.execute("INSERT INTO `uch`(`num`, `id`, `name`, `klas`, `send`) VALUES ({}, {}, '{}', '{}', 0)".format(num, id, h[0]['first_name']+' '+h[0]['last_name'], '-'))
 				con.commit()
 
 				vk.method("messages.send", {"peer_id": id, "message": 'Выбери класс, в котором ты учишся:', 'keyboard': keyboard1, 'random_id':0})
@@ -114,22 +123,43 @@ while True:
 					else:
 						vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': keyboard1, 'random_id':0})
 				else:
-					if body == 'Сменить класс.':
-						cur.execute("UPDATE `uch` SET `klas`= '{}' WHERE `id` = {}".format('-', id))
-						con.commit()
+					cur.execute("SELECT `send` FROM `uch` WHERE `id` = {}".format(id))
+					if cur.fetchall()[0]['send'] == 0:
+						if body == 'Сменить класс.':
+							cur.execute("UPDATE `uch` SET `klas`= '{}' WHERE `id` = {}".format('-', id))
+							con.commit()
 
-						vk.method("messages.send", {"peer_id": id, "message": 'Выберай новый класс.', 'keyboard': keyboard1, 'random_id':0})
+							vk.method("messages.send", {"peer_id": id, "message": 'Выберай новый класс.', 'keyboard': keyboard1, 'random_id':0})
 
-					elif body == 'Расписание(на доработке).':
-						vk.method("messages.send", {"peer_id": id, "message": 'На доработке...', 'keyboard': keyboard3, 'random_id':0})
+						elif body == 'Расписание(на доработке).':
+							vk.method("messages.send", {"peer_id": id, "message": 'На доработке...', 'keyboard': keyboard3, 'random_id':0})
 
-					elif body == 'Отключить уведомления.':
-						# SELECT `id` FROM `uch` WHERE `klas` = '5k' and `send` = 0
-						cur.execute("UPDATE `uch` SET `send`= 1 WHERE `id` = {}".format(id))
-						con.commit()
-
+						elif body == 'Отключить уведомления.':
+							cur.execute("UPDATE `uch` SET `send`= 1 WHERE `id` = {}".format(id))
+							con.commit()
+							vk.method("messages.send", {"peer_id": id, "message": 'Уведомления выключены.', 'keyboard': keyboard4, 'random_id':0})
+						
+						else:
+							vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': keyboard3, 'random_id':0})
+					
 					else:
-						vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': keyboard3, 'random_id':0})
+						if body == 'Сменить класс.':
+							cur.execute("UPDATE `uch` SET `klas`= '{}' WHERE `id` = {}".format('-', id))
+							con.commit()
+
+							vk.method("messages.send", {"peer_id": id, "message": 'Выберай новый класс.', 'keyboard': keyboard1, 'random_id':0})
+
+						elif body == 'Расписание(на доработке).':
+							vk.method("messages.send", {"peer_id": id, "message": 'На доработке...', 'keyboard': keyboard4, 'random_id':0})
+
+						elif body == 'Включить уведомления.':
+							cur.execute("UPDATE `uch` SET `send`= 0 WHERE `id` = {}".format(id))
+							con.commit()
+							vk.method("messages.send", {"peer_id": id, "message": 'Уведомления включены.', 'keyboard': keyboard3, 'random_id':0})
+
+						else:
+							vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': keyboard4, 'random_id':0})
+
 
 		s = []
 		cur.execute("SELECT `time` FROM `zvon`")
