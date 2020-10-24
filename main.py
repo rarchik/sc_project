@@ -8,6 +8,7 @@ import datetime
 import time
 import pymysql
 import pymysql.cursors
+import gspread
 
 con = pymysql.connect(host='localhost',
         user='root',
@@ -18,7 +19,11 @@ con = pymysql.connect(host='localhost',
 
 cur = con.cursor()
 
-vk = vk_api.VkApi(token="")
+gc = gspread.service_account(filename='mypython-290810-dd40e29bd1bb.json')
+
+sh = gc.open("sc pro")
+
+vk = vk_api.VkApi(token="3e717cbe0e45952a041a8d8df40a5d7232801a2ac114e5f3714b605d39d0ae94f42862d9c205e6aed9f52")
 
 keyboard1 = VkKeyboard(one_time=True)
 
@@ -68,7 +73,7 @@ keyboard4.add_button('Расписание(на доработке).', color=VkK
 keyboard4.add_line()
 keyboard4.add_button('Включить уведомления.', color=VkKeyboardColor.POSITIVE)
 
-keyboard4 = keyboard3.get_keyboard()
+keyboard4 = keyboard4.get_keyboard()
 
 kl = {'5Д':'5d', '5Л':'5l', '5К':'5k',
 	  '6К':'6k', '6Л':'6l',
@@ -77,6 +82,9 @@ kl = {'5Д':'5d', '5Л':'5l', '5К':'5k',
 	  '9К':'9k', '9Л':'9l',
 	  '10Л':'10l',
 	  '11Л':'11l'}
+
+ty = 0
+sends = []
 
 while True:
 	try:
@@ -103,7 +111,7 @@ while True:
 				con.commit()
 
 				vk.method("messages.send", {"peer_id": id, "message": 'Выбери класс, в котором ты учишся:', 'keyboard': keyboard1, 'random_id':0})
-			
+
 			else:
 				print(value.strftime('%Y-%m-%d %H:%M:%S'),'-',body,' - ',id, ' - ',h[0]['first_name']+' '+h[0]['last_name'])
 				cur.execute("SELECT * FROM `uch` WHERE `id` = "+str(id))
@@ -113,15 +121,15 @@ while True:
 						con.commit()
 
 						vk.method("messages.send", {"peer_id": id, "message": 'Отлично! Теперь я могу оповещать тебя о звонках👍', 'keyboard': keyboard3, 'random_id':0})
-					
+
 					elif body == '--->':
-						vk.method("messages.send", {"peer_id": id, "message": 'Следующая страница.', 'keyboard': keyboard2, 'random_id':0})
+						vk.method("messages.send", {"peer_id": id, "message": 'Следующая страница.', 'keyboard': keyboard2, 'random_id': 0})
 
 					elif body == '<---':
-						vk.method("messages.send", {"peer_id": id, "message": 'Предидущая страница.', 'keyboard': keyboard1, 'random_id':0})
+						vk.method("messages.send", {"peer_id": id, "message": 'Предидущая страница.', 'keyboard': keyboard1, 'random_id': 0})
 
 					else:
-						vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': keyboard1, 'random_id':0})
+						vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': keyboard1, 'random_id': 0})
 				else:
 					cur.execute("SELECT `send` FROM `uch` WHERE `id` = {}".format(id))
 					if cur.fetchall()[0]['send'] == 0:
@@ -129,19 +137,19 @@ while True:
 							cur.execute("UPDATE `uch` SET `klas`= '{}' WHERE `id` = {}".format('-', id))
 							con.commit()
 
-							vk.method("messages.send", {"peer_id": id, "message": 'Выберай новый класс.', 'keyboard': keyboard1, 'random_id':0})
+							vk.method("messages.send", {"peer_id": id, "message": 'Выберай новый класс.', 'keyboard': keyboard1, 'random_id': 0})
 
 						elif body == 'Расписание(на доработке).':
-							vk.method("messages.send", {"peer_id": id, "message": 'На доработке...', 'keyboard': keyboard3, 'random_id':0})
+							vk.method("messages.send", {"peer_id": id, "message": 'На доработке...', 'keyboard': keyboard3, 'random_id': 0})
 
 						elif body == 'Отключить уведомления.':
 							cur.execute("UPDATE `uch` SET `send`= 1 WHERE `id` = {}".format(id))
 							con.commit()
-							vk.method("messages.send", {"peer_id": id, "message": 'Уведомления выключены.', 'keyboard': keyboard4, 'random_id':0})
-						
+							vk.method("messages.send", {"peer_id": id, "message": 'Уведомления выключены.', 'keyboard': keyboard4, 'random_id': 0})
+
 						else:
 							vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': keyboard3, 'random_id':0})
-					
+
 					else:
 						if body == 'Сменить класс.':
 							cur.execute("UPDATE `uch` SET `klas`= '{}' WHERE `id` = {}".format('-', id))
@@ -160,45 +168,78 @@ while True:
 						else:
 							vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': keyboard4, 'random_id':0})
 
+		if ty == 0:
+			worksheet = sh.worksheet("zvon")
+			s = worksheet.col_values(1)[1:]
 
-		s = []
-		cur.execute("SELECT `time` FROM `zvon`")
-		for i in cur.fetchall():
-			s.append(i['time'])
-
+		ty += 1
+		if ty > 30:
+			ty = 0
+			
 		value = datetime.datetime.fromtimestamp(time.time())
 		d = value.strftime('%H:%M')
-		print(d)
+
+		if d[0] == '0':
+			d = d[1:]
+		
+		print(ty, d)
 		ans = {}
 
-		if d in s:
-			print("SELECT `send` FROM `zvon` WHERE `time` = '{}'".format(d))
-
-			cur.execute("SELECT `send` FROM `zvon` WHERE `time` = '{}'".format(d))
-			if cur.fetchall()[0]['send'] != 1:
+		if (d in s) and (d not in sends):
+			worksheet = sh.worksheet("zvon")
+			a = worksheet.findall(d)[0] 
+			if worksheet.cell(a.row, 2).value != 1:
 				for i in kl.values():
-					if cur.execute("SELECT * FROM `{}` WHERE `start` = '{}'".format(i, d)) != 0:
-						a = 'Начался {} урок.'.format(cur.fetchall()[0]['num'])
-						ans.update([(i, a)])
-					elif cur.execute("SELECT * FROM `{}` WHERE `end` = '{}'".format(i, d)) != 0:
-						a = 'Закончился {} урок.'.format(cur.fetchall()[0]['num'])
-						ans.update([(i, a)])
-				
+					worksheet = sh.worksheet(i)
+					a = worksheet.findall(d)
+					# print(a, i)
+					if a != []:
+						a = a[0]
+
+						if a.col == 2:
+							a = 'Начался {} урок.'.format(worksheet.cell(a.row, 1).value)
+							ans.update([(i, a)])
+
+						elif a.col == 3:
+							a = 'Закончился {} урок.'.format(worksheet.cell(a.row, 1).value)
+							ans.update([(i, a)])
+
+				print(ans)
+
 				for i in ans.keys():
 					cur.execute("SELECT `id` FROM `uch` WHERE `klas` = '{}' and `send` = 0".format(i))
 
 					for t in cur.fetchall():
 						vk.method("messages.send", {"peer_id": t['id'], "message": ans[i], 'keyboard': keyboard3, 'random_id':0})
 
-				cur.execute("UPDATE `zvon` SET `send`= 1 WHERE `time` = '{}'".format(d))
-				con.commit()
+				worksheet = sh.worksheet("zvon")
+				a = worksheet.findall(d)[0]
+				sends.append(d)
+
+				worksheet.update_cell(a.row, 2, 1)
+				worksheet.format("B"+str(a.row), {
+				"backgroundColor": {
+					"red": 0.0,
+					"green": 100.0,
+					"blue": 0.0
+				}})
+				
 			else:
 				pass
 
 		elif d == '18:00':
-			for i in s:
-				cur.execute("UPDATE `zvon` SET `send`= 0 WHERE `time` = '{}'".format(i))
-				con.commit()
+			f = []
+			sends = []
+			for i in range(len(s)):
+				f.append([0])
+			worksheet.update('B2:B', f)
+			worksheet.format("B2:B36", {
+			"backgroundColor": {
+				"red": 100.0,
+				"green": 0.0,
+				"blue": 0.0
+			}})
+					
 
 		else:
 			time.sleep(0.5)
@@ -207,4 +248,4 @@ while True:
 		print(err)
 		vk.method("messages.send", {"peer_id": 226178635, "message": err, 'random_id':0})
 
-
+# d = value.strftime('%w')
