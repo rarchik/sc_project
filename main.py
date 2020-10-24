@@ -23,39 +23,9 @@ gc = gspread.service_account(filename='mypython-290810-dd40e29bd1bb.json')
 
 sh = gc.open("sc pro")
 
-vk = vk_api.VkApi(token="3e717cbe0e45952a041a8d8df40a5d7232801a2ac114e5f3714b605d39d0ae94f42862d9c205e6aed9f52")
+vk = vk_api.VkApi(token="")
 
-keyboard1 = VkKeyboard(one_time=True)
 
-keyboard1.add_button('5Д', color=VkKeyboardColor.PRIMARY)
-keyboard1.add_button('5К', color=VkKeyboardColor.PRIMARY)
-keyboard1.add_button('5Л', color=VkKeyboardColor.PRIMARY)
-keyboard1.add_line()
-keyboard1.add_button('6К', color=VkKeyboardColor.NEGATIVE )
-keyboard1.add_button('6Л', color=VkKeyboardColor.NEGATIVE )
-keyboard1.add_line()
-keyboard1.add_button('7К', color=VkKeyboardColor.POSITIVE)
-keyboard1.add_button('7Л', color=VkKeyboardColor.POSITIVE)
-keyboard1.add_line()
-keyboard1.add_button('8К', color=VkKeyboardColor.NEGATIVE )
-keyboard1.add_button('8Л', color=VkKeyboardColor.NEGATIVE )
-keyboard1.add_line()
-keyboard1.add_button('--->', color=VkKeyboardColor.PRIMARY)
-
-keyboard1 = keyboard1.get_keyboard()
-
-keyboard2 = VkKeyboard(one_time=True)
-
-keyboard2.add_button('9К', color=VkKeyboardColor.PRIMARY)
-keyboard2.add_button('9Л', color=VkKeyboardColor.PRIMARY)
-keyboard2.add_line()
-keyboard2.add_button('10Л', color=VkKeyboardColor.POSITIVE)
-keyboard2.add_line()
-keyboard2.add_button('11Л', color=VkKeyboardColor.PRIMARY)
-keyboard2.add_line()
-keyboard2.add_button('<---', color=VkKeyboardColor.PRIMARY)
-
-keyboard2 = keyboard2.get_keyboard()
 
 keyboard3 = VkKeyboard(one_time=True)
 
@@ -75,15 +45,53 @@ keyboard4.add_button('Включить уведомления.', color=VkKeyboar
 
 keyboard4 = keyboard4.get_keyboard()
 
-kl = {'5Д':'5d', '5Л':'5l', '5К':'5k',
-	  '6К':'6k', '6Л':'6l',
-	  '7К':'7k', '7Л':'7l',
-	  '8К':'8k', '8Л':'8l',
-	  '9К':'9k', '9Л':'9l',
-	  '10Л':'10l',
-	  '11Л':'11l'}
+worksheet = sh.worksheet("klass")
+c1 = worksheet.col_values(1)
+c2 = worksheet.col_values(2)
+kl = {}
+
+for i in range(len(c1)):
+	kl.update([(c1[i], c2[i])])
+
+keydoards = {}
+
+numb = VkKeyboard(one_time=True)
+
+numb.add_button('5', color=VkKeyboardColor.PRIMARY)
+numb.add_button('6', color=VkKeyboardColor.PRIMARY)
+numb.add_button('7', color=VkKeyboardColor.PRIMARY)
+numb.add_line()
+numb.add_button('8', color=VkKeyboardColor.POSITIVE)
+numb.add_button('9', color=VkKeyboardColor.POSITIVE)
+numb.add_button('10', color=VkKeyboardColor.POSITIVE)
+numb.add_line()
+numb.add_button('11', color=VkKeyboardColor.PRIMARY)
+
+numb = numb.get_keyboard()
+j = []
+p = 0
+for i in range(5,12):
+	for y in c1:
+		if str(i) in y:
+			j.append(y)
+
+	key = VkKeyboard(one_time=True)
+
+	for y in j:
+		if p == 3:
+			p = 0
+			key.add_line()
+			key.add_button(y, color=VkKeyboardColor.PRIMARY)
+		else:
+			key.add_button(y, color=VkKeyboardColor.PRIMARY)
+		p += 1
+
+	j = []
+	p = 0
+	keydoards.update([(i, key.get_keyboard())])
 
 ty = 0
+tr = 0
 sends = []
 
 while True:
@@ -107,37 +115,51 @@ while True:
 				num = cur.fetchall()
 				num = num[-1]['num'] + 1
 
-				cur.execute("INSERT INTO `uch`(`num`, `id`, `name`, `klas`, `send`) VALUES ({}, {}, '{}', '{}', 0)".format(num, id, h[0]['first_name']+' '+h[0]['last_name'], '-'))
+				cur.execute("INSERT INTO `uch`(`num`, `id`, `name`, `klas`, `send`, 'stat') VALUES ({}, {}, '{}', '{}', 0, 0)".format(num, id, h[0]['first_name']+' '+h[0]['last_name'], '-'))
 				con.commit()
 
-				vk.method("messages.send", {"peer_id": id, "message": 'Выбери класс, в котором ты учишся:', 'keyboard': keyboard1, 'random_id':0})
+				vk.method("messages.send", {"peer_id": id, "message": 'Выбери номер класса, в котором ты учишся:', 'keyboard': numb, 'random_id':0})
 
 			else:
 				print(value.strftime('%Y-%m-%d %H:%M:%S'),'-',body,' - ',id, ' - ',h[0]['first_name']+' '+h[0]['last_name'])
 				cur.execute("SELECT * FROM `uch` WHERE `id` = "+str(id))
-				if cur.fetchall()[0]['klas'] == '-':
-					if body in kl.keys():
-						cur.execute("UPDATE `uch` SET `klas`= '{}' WHERE `id` = {}".format(kl[body], id))
-						con.commit()
+				baz = cur.fetchall()[0]
+				if baz['klas'] not in kl.values():
+					try:
+						if body in kl.keys():
+							cur.execute("UPDATE `uch` SET `klas`= '{}', `stat` = 2 WHERE `id` = {}".format(kl[body], id))
+							con.commit()
 
-						vk.method("messages.send", {"peer_id": id, "message": 'Отлично! Теперь я могу оповещать тебя о звонках👍', 'keyboard': keyboard3, 'random_id':0})
+							cur.execute("SELECT `send` FROM `uch` WHERE `id` = {}".format(id))
+							if cur.fetchall()[0]['send'] == 0:
+								vk.method("messages.send", {"peer_id": id, "message": 'Отлично! Теперь я могу оповещать тебя о звонках👍', 'keyboard': keyboard3, 'random_id':0})
+							else: 
+								vk.method("messages.send", {"peer_id": id, "message": 'Отлично! Теперь я могу оповещать тебя о звонках👍', 'keyboard': keyboard4, 'random_id':0})
+					
+						elif baz['stat'] == 0 and int(body) in keydoards.keys():
+							cur.execute("UPDATE `uch` SET `stat` = 1 WHERE `id` = {}".format(id))
+							con.commit()
+							vk.method("messages.send", {"peer_id": id, "message": 'Выберай свой класс.', 'keyboard': keydoards[int(body)], 'random_id':0})
+						else:
+							vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': numb, 'random_id': 0})
 
-					elif body == '--->':
-						vk.method("messages.send", {"peer_id": id, "message": 'Следующая страница.', 'keyboard': keyboard2, 'random_id': 0})
+					except: 
+						vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': numb, 'random_id': 0})
+					# elif body == '--->':
+					# 	vk.method("messages.send", {"peer_id": id, "message": 'Следующая страница.', 'keyboard': keyboard2, 'random_id': 0})
 
-					elif body == '<---':
-						vk.method("messages.send", {"peer_id": id, "message": 'Предидущая страница.', 'keyboard': keyboard1, 'random_id': 0})
+					# elif body == '<---':
+					# 	vk.method("messages.send", {"peer_id": id, "message": 'Предидущая страница.', 'keyboard': keyboard1, 'random_id': 0})
 
-					else:
-						vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': keyboard1, 'random_id': 0})
+					
 				else:
 					cur.execute("SELECT `send` FROM `uch` WHERE `id` = {}".format(id))
 					if cur.fetchall()[0]['send'] == 0:
 						if body == 'Сменить класс.':
-							cur.execute("UPDATE `uch` SET `klas`= '{}' WHERE `id` = {}".format('-', id))
+							cur.execute("UPDATE `uch` SET `klas`= '{}', `stat`= 0 WHERE `id` = {}".format('-', id))
 							con.commit()
 
-							vk.method("messages.send", {"peer_id": id, "message": 'Выберай новый класс.', 'keyboard': keyboard1, 'random_id': 0})
+							vk.method("messages.send", {"peer_id": id, "message": 'Выберай новый класс.', 'keyboard': numb, 'random_id':0})
 
 						elif body == 'Расписание(на доработке).':
 							vk.method("messages.send", {"peer_id": id, "message": 'На доработке...', 'keyboard': keyboard3, 'random_id': 0})
@@ -152,10 +174,10 @@ while True:
 
 					else:
 						if body == 'Сменить класс.':
-							cur.execute("UPDATE `uch` SET `klas`= '{}' WHERE `id` = {}".format('-', id))
+							cur.execute("UPDATE `uch` SET `klas`= '{}', `stat`= 0 WHERE `id` = {}".format('-', id))
 							con.commit()
 
-							vk.method("messages.send", {"peer_id": id, "message": 'Выберай новый класс.', 'keyboard': keyboard1, 'random_id':0})
+							vk.method("messages.send", {"peer_id": id, "message": 'Выберай новый класс.', 'keyboard': numb, 'random_id':0})
 
 						elif body == 'Расписание(на доработке).':
 							vk.method("messages.send", {"peer_id": id, "message": 'На доработке...', 'keyboard': keyboard4, 'random_id':0})
@@ -168,21 +190,78 @@ while True:
 						else:
 							vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': keyboard4, 'random_id':0})
 
+		# обновляю базу звонков
 		if ty == 0:
 			worksheet = sh.worksheet("zvon")
 			s = worksheet.col_values(1)[1:]
+			print('zvon base update')
 
 		ty += 1
-		if ty > 30:
+		if ty > 60:
 			ty = 0
-			
+		
+
+		# обновляю базу классов
+		if tr == 0:
+			worksheet = sh.worksheet("klass")
+			c1 = worksheet.col_values(1)
+			c2 = worksheet.col_values(2)
+			kl = {}
+
+			for i in range(len(c1)):
+				kl.update([(c1[i], c2[i])])
+
+			keydoards = {}
+
+			numb = VkKeyboard(one_time=True)
+
+			numb.add_button('5', color=VkKeyboardColor.PRIMARY)
+			numb.add_button('6', color=VkKeyboardColor.PRIMARY)
+			numb.add_button('7', color=VkKeyboardColor.PRIMARY)
+			numb.add_line()
+			numb.add_button('8', color=VkKeyboardColor.POSITIVE)
+			numb.add_button('9', color=VkKeyboardColor.POSITIVE)
+			numb.add_button('10', color=VkKeyboardColor.POSITIVE)
+			numb.add_line()
+			numb.add_button('11', color=VkKeyboardColor.PRIMARY)
+
+			numb = numb.get_keyboard()
+			j = []
+			p = 0
+			for i in range(5,12):
+				for y in c1:
+					if str(i) in y:
+						j.append(y)
+
+				key = VkKeyboard(one_time=True)
+
+				for y in j:
+					if p == 3:
+						p = 0
+						key.add_line()
+						key.add_button(y, color=VkKeyboardColor.PRIMARY)
+					else:
+						key.add_button(y, color=VkKeyboardColor.PRIMARY)
+					p += 1
+
+				j = []
+				p = 0
+				keydoards.update([(i, key.get_keyboard())])
+			print('klass base update')
+		tr += 1
+		if tr > 120:
+			tr = 0
+
+
+
+
 		value = datetime.datetime.fromtimestamp(time.time())
 		d = value.strftime('%H:%M')
 
 		if d[0] == '0':
 			d = d[1:]
 		
-		print(ty, d)
+		print(d)
 		ans = {}
 
 		if (d in s) and (d not in sends):
