@@ -19,18 +19,29 @@ con = pymysql.connect(host='localhost',
 
 cur = con.cursor()
 
-gc = gspread.service_account(filename='mypython-290810-dd40e29bd1bb.json')
+gc = gspread.service_account(filename='mypython-290810-738113f4f59a.json')
 
 sh = gc.open("sc pro")
 
-vk = vk_api.VkApi(token="")
+vk = vk_api.VkApi(token="c07179bd1bff4662ceaebd183e8f9cf8be518c06ded518d668822076b9dfeb8d3caec307fb79d6afee982")
 
+bday = {
+	'0': 7,
+	'1': 1,
+	'2': 2,
+	'3': 3,
+	'4': 4,
+	'5': 5,
+	'6': 6
+}
 
+value = datetime.datetime.fromtimestamp(time.time())
+day = bday[value.strftime('%w')]
 
 keyboard3 = VkKeyboard(one_time=True)
 
 keyboard3.add_button('Сменить класс.', color=VkKeyboardColor.POSITIVE)
-keyboard3.add_button('Расписание(на доработке).', color=VkKeyboardColor.PRIMARY)
+keyboard3.add_button('Расписание NEW.', color=VkKeyboardColor.PRIMARY)
 keyboard3.add_line()
 keyboard3.add_button('Отключить уведомления.', color=VkKeyboardColor.NEGATIVE)
 
@@ -39,7 +50,7 @@ keyboard3 = keyboard3.get_keyboard()
 keyboard4 = VkKeyboard(one_time=True)
 
 keyboard4.add_button('Сменить класс.', color=VkKeyboardColor.POSITIVE)
-keyboard4.add_button('Расписание(на доработке).', color=VkKeyboardColor.PRIMARY)
+keyboard4.add_button('Расписание NEW.', color=VkKeyboardColor.PRIMARY)
 keyboard4.add_line()
 keyboard4.add_button('Включить уведомления.', color=VkKeyboardColor.POSITIVE)
 
@@ -90,8 +101,29 @@ for i in range(5,12):
 	p = 0
 	keydoards.update([(i, key.get_keyboard())])
 
+raspis = {}
+
+for i in kl.values():
+	worksheet = sh.worksheet(i)
+	
+	s = worksheet.col_values(day*4-3)[1:]
+	st = ''
+
+	for t in range(len(s)):
+		if s[t] == '':
+			st += str(t) + ' урока нет\n' 
+		else:
+			st += str(t) + ' урок - ' + s[t] + '\n'
+
+
+	raspis.update([(i, st)])
+
+
+
+
 ty = 0
 tr = 0
+trasp = 0
 sends = []
 
 while True:
@@ -115,7 +147,7 @@ while True:
 				num = cur.fetchall()
 				num = num[-1]['num'] + 1
 
-				cur.execute("INSERT INTO `uch`(`num`, `id`, `name`, `klas`, `send`, 'stat') VALUES ({}, {}, '{}', '{}', 0, 0)".format(num, id, h[0]['first_name']+' '+h[0]['last_name'], '-'))
+				cur.execute("INSERT INTO `uch`(`num`, `id`, `name`, `klas`, `send`, `stat`) VALUES ({}, {}, '{}', '{}', 0, 0)".format(num, id, h[0]['first_name']+' '+h[0]['last_name'], '-'))
 				con.commit()
 
 				vk.method("messages.send", {"peer_id": id, "message": 'Выбери номер класса, в котором ты учишся:', 'keyboard': numb, 'random_id':0})
@@ -139,7 +171,7 @@ while True:
 						elif baz['stat'] == 0 and int(body) in keydoards.keys():
 							cur.execute("UPDATE `uch` SET `stat` = 1 WHERE `id` = {}".format(id))
 							con.commit()
-							vk.method("messages.send", {"peer_id": id, "message": 'Выберай свой класс.', 'keyboard': keydoards[int(body)], 'random_id':0})
+							vk.method("messages.send", {"peer_id": id, "message": 'Выбирай свой класс.', 'keyboard': keydoards[int(body)], 'random_id':0})
 						else:
 							vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': numb, 'random_id': 0})
 
@@ -161,8 +193,9 @@ while True:
 
 							vk.method("messages.send", {"peer_id": id, "message": 'Выберай новый класс.', 'keyboard': numb, 'random_id':0})
 
-						elif body == 'Расписание(на доработке).':
-							vk.method("messages.send", {"peer_id": id, "message": 'На доработке...', 'keyboard': keyboard3, 'random_id': 0})
+						elif body == 'Расписание NEW.':
+							cur.execute("SELECT `klas` FROM `uch` WHERE `id` = {}".format(id))
+							vk.method("messages.send", {"peer_id": id, "message": raspis[cur.fetchall()[0]['klas']], 'keyboard': keyboard3, 'random_id': 0})
 
 						elif body == 'Отключить уведомления.':
 							cur.execute("UPDATE `uch` SET `send`= 1 WHERE `id` = {}".format(id))
@@ -179,8 +212,9 @@ while True:
 
 							vk.method("messages.send", {"peer_id": id, "message": 'Выберай новый класс.', 'keyboard': numb, 'random_id':0})
 
-						elif body == 'Расписание(на доработке).':
-							vk.method("messages.send", {"peer_id": id, "message": 'На доработке...', 'keyboard': keyboard4, 'random_id':0})
+						elif body == 'Расписание NEW.':
+							cur.execute("SELECT `klas` FROM `uch` WHERE `id` = {}".format(id))
+							vk.method("messages.send", {"peer_id": id, "message": raspis[cur.fetchall()[0]['klas']], 'keyboard': keyboard4, 'random_id': 0})
 
 						elif body == 'Включить уведомления.':
 							cur.execute("UPDATE `uch` SET `send`= 0 WHERE `id` = {}".format(id))
@@ -197,7 +231,7 @@ while True:
 			print('zvon base update')
 
 		ty += 1
-		if ty > 60:
+		if ty > 240:
 			ty = 0
 		
 
@@ -249,8 +283,32 @@ while True:
 				keydoards.update([(i, key.get_keyboard())])
 			print('klass base update')
 		tr += 1
-		if tr > 120:
+		if tr > 240:
 			tr = 0
+
+		# обновление раписания
+
+		if trasp == 0:
+			raspis = {}
+			for i in kl.values():
+				worksheet = sh.worksheet(i)
+				
+				s = worksheet.col_values(day*4-3)[1:]
+				st = ''
+
+				for t in range(len(s)):
+					if s[t] == '':
+						st += str(t) + ' урока нет\n' 
+					else:
+						st += str(t) + ' урок - ' + s[t] + '\n'
+
+
+				raspis.update([(i, st)])
+			print('raspis base update')
+
+		trasp += 1
+		if trasp > 240:
+			trasp = 0
 
 
 
@@ -265,25 +323,30 @@ while True:
 		ans = {}
 
 		if (d in s) and (d not in sends):
+			value = datetime.datetime.fromtimestamp(time.time())
+			day = bday[value.strftime('%w')]
+
 			worksheet = sh.worksheet("zvon")
-			a = worksheet.findall(d)[0] 
+			a = worksheet.findall(d)[0]
+
 			if worksheet.cell(a.row, 2).value != 1:
-				for i in kl.values():
-					worksheet = sh.worksheet(i)
-					a = worksheet.findall(d)
-					# print(a, i)
-					if a != []:
-						a = a[0]
+				for u in kl.values():
+					try:
+						worksheet = sh.worksheet(u)
+						a = worksheet.findall(d)
+						
+						if a != []:
+							for i in a:
+								if i.col == (day*4) - 1:
+									a = 'Начался {} урок. {}'.format(worksheet.cell(i.row, i.col-1).value, worksheet.cell(i.row, i.col-2).value)
+									ans.update([(u, a)])
 
-						if a.col == 2:
-							a = 'Начался {} урок.'.format(worksheet.cell(a.row, 1).value)
-							ans.update([(i, a)])
+								elif i.col == day*4:
+									a = 'Закончился {} урок.'.format(worksheet.cell(i.row, i.col-2).value)
+									ans.update([(u, a)])
+					except:
+						pass
 
-						elif a.col == 3:
-							a = 'Закончился {} урок.'.format(worksheet.cell(a.row, 1).value)
-							ans.update([(i, a)])
-
-				print(ans)
 
 				for i in ans.keys():
 					cur.execute("SELECT `id` FROM `uch` WHERE `klas` = '{}' and `send` = 0".format(i))
@@ -326,5 +389,3 @@ while True:
 	except Exception as err:
 		print(err)
 		vk.method("messages.send", {"peer_id": 226178635, "message": err, 'random_id':0})
-
-# d = value.strftime('%w')
