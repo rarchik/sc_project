@@ -23,7 +23,7 @@ gc = gspread.service_account(filename='mypython-290810-738113f4f59a.json')
 
 sh = gc.open("sc pro")
 
-vk = vk_api.VkApi(token="c07179bd1bff4662ceaebd183e8f9cf8be518c06ded518d668822076b9dfeb8d3caec307fb79d6afee982")
+vk = vk_api.VkApi(token="")
 
 bday = {
 	'0': 7,
@@ -56,16 +56,6 @@ keyboard4.add_button('Включить уведомления.', color=VkKeyboar
 
 keyboard4 = keyboard4.get_keyboard()
 
-worksheet = sh.worksheet("klass")
-c1 = worksheet.col_values(1)
-c2 = worksheet.col_values(2)
-kl = {}
-
-for i in range(len(c1)):
-	kl.update([(c1[i], c2[i])])
-
-keydoards = {}
-
 numb = VkKeyboard(one_time=True)
 
 numb.add_button('5', color=VkKeyboardColor.PRIMARY)
@@ -79,51 +69,82 @@ numb.add_line()
 numb.add_button('11', color=VkKeyboardColor.PRIMARY)
 
 numb = numb.get_keyboard()
-j = []
-p = 0
-for i in range(5,12):
-	for y in c1:
-		if str(i) in y:
-			j.append(y)
 
-	key = VkKeyboard(one_time=True)
 
-	for y in j:
-		if p == 3:
-			p = 0
-			key.add_line()
-			key.add_button(y, color=VkKeyboardColor.PRIMARY)
-		else:
-			key.add_button(y, color=VkKeyboardColor.PRIMARY)
-		p += 1
+admin_key = VkKeyboard(one_time=True)
+
+admin_key.add_button('Обновить звонки, расписание, классы.', color=VkKeyboardColor.NEGATIVE)
+
+admin_key = admin_key.get_keyboard()
+
+
+zv = 0
+keydoards = {}
+kl = {}
+raspis = {}
+
+def update_all():
+	
+	global zv, keydoards, kl, raspis
+
+	# обновление звонков
+
+	worksheet = sh.worksheet("zvon")
+	zv = worksheet.col_values(1)[1:]
+
+	# обновление классов
+
+	worksheet = sh.worksheet("klass")
+	c1 = worksheet.col_values(1)
+	c2 = worksheet.col_values(2)
+
+	for i in range(len(c1)):
+		kl.update([(c1[i], c2[i])])
 
 	j = []
 	p = 0
-	keydoards.update([(i, key.get_keyboard())])
+	for i in range(5,12):
+		for y in c1:
+			if str(i) in y:
+				j.append(y)
 
-raspis = {}
+		key = VkKeyboard(one_time=True)
 
-for i in kl.values():
-	worksheet = sh.worksheet(i)
-	
-	s = worksheet.col_values(day*4-3)[1:]
-	st = ''
+		for y in j:
+			if p == 3:
+				p = 0
+				key.add_line()
+				key.add_button(y, color=VkKeyboardColor.PRIMARY)
+			else:
+				key.add_button(y, color=VkKeyboardColor.PRIMARY)
+			p += 1
 
-	for t in range(len(s)):
-		if s[t] == '':
-			st += str(t) + ' урока нет\n' 
-		else:
-			st += str(t) + ' урок - ' + s[t] + '\n'
+		j = []
+		p = 0
+		keydoards.update([(i, key.get_keyboard())])
+
+	# обновление раписания
+
+	for i in kl.values():
+		worksheet = sh.worksheet(i)
+		
+		s = worksheet.col_values(day*4-3)[1:]
+		st = ''
+
+		for t in range(len(s)):
+			if s[t] == '':
+				st += str(t) + ' урока нет\n' 
+			else:
+				st += str(t) + ' урок - ' + s[t] + '\n'
 
 
-	raspis.update([(i, st)])
+		raspis.update([(i, st)])
+
+	print('all update completed')
 
 
+update_all()
 
-
-ty = 0
-tr = 0
-trasp = 0
 sends = []
 
 while True:
@@ -147,7 +168,7 @@ while True:
 				num = cur.fetchall()
 				num = num[-1]['num'] + 1
 
-				cur.execute("INSERT INTO `uch`(`num`, `id`, `name`, `klas`, `send`, `stat`) VALUES ({}, {}, '{}', '{}', 0, 0)".format(num, id, h[0]['first_name']+' '+h[0]['last_name'], '-'))
+				cur.execute("INSERT INTO `uch`(`num`, `id`, `name`, `klas`, `send`, `stat`, `admin`) VALUES ({}, {}, '{}', '{}', 0, 0, 0)".format(num, id, h[0]['first_name']+' '+h[0]['last_name'], '-'))
 				con.commit()
 
 				vk.method("messages.send", {"peer_id": id, "message": 'Выбери номер класса, в котором ты учишся:', 'keyboard': numb, 'random_id':0})
@@ -185,131 +206,72 @@ while True:
 
 					
 				else:
-					cur.execute("SELECT `send` FROM `uch` WHERE `id` = {}".format(id))
-					if cur.fetchall()[0]['send'] == 0:
-						if body == 'Сменить класс.':
-							cur.execute("UPDATE `uch` SET `klas`= '{}', `stat`= 0 WHERE `id` = {}".format('-', id))
-							con.commit()
 
-							vk.method("messages.send", {"peer_id": id, "message": 'Выберай новый класс.', 'keyboard': numb, 'random_id':0})
+					if body == 'админка':
+						vk.method("messages.send", {"peer_id": id, "message": 'Админ панель:', 'keyboard': admin_key, 'random_id':0})
+					
+					else:
+						cur.execute("SELECT `send` FROM `uch` WHERE `id` = {}".format(id))
+						if cur.fetchall()[0]['send'] == 0:
+							if body == 'Сменить класс.':
+								cur.execute("UPDATE `uch` SET `klas`= '{}', `stat`= 0 WHERE `id` = {}".format('-', id))
+								con.commit()
 
-						elif body == 'Расписание NEW.':
-							cur.execute("SELECT `klas` FROM `uch` WHERE `id` = {}".format(id))
-							vk.method("messages.send", {"peer_id": id, "message": raspis[cur.fetchall()[0]['klas']], 'keyboard': keyboard3, 'random_id': 0})
+								vk.method("messages.send", {"peer_id": id, "message": 'Выберай новый класс.', 'keyboard': numb, 'random_id':0})
 
-						elif body == 'Отключить уведомления.':
-							cur.execute("UPDATE `uch` SET `send`= 1 WHERE `id` = {}".format(id))
-							con.commit()
-							vk.method("messages.send", {"peer_id": id, "message": 'Уведомления выключены.', 'keyboard': keyboard4, 'random_id': 0})
+							elif body == 'Расписание NEW.':
+								cur.execute("SELECT `klas` FROM `uch` WHERE `id` = {}".format(id))
+								vk.method("messages.send", {"peer_id": id, "message": raspis[cur.fetchall()[0]['klas']], 'keyboard': keyboard3, 'random_id': 0})
+
+							elif body == 'Отключить уведомления.':
+								cur.execute("UPDATE `uch` SET `send`= 1 WHERE `id` = {}".format(id))
+								con.commit()
+								vk.method("messages.send", {"peer_id": id, "message": 'Уведомления выключены.', 'keyboard': keyboard4, 'random_id': 0})
+
+							elif body == 'Обновить звонки, расписание, классы.':
+								cur.execute("SELECT `admin` FROM `uch` WHERE `id` = {}".format(id))
+								if cur.fetchall()[0]['admin'] == 1:
+									try:
+										update_all()
+										vk.method("messages.send", {"peer_id": id, "message": 'Данные успешно обновлены.', 'keyboard': keyboard3, 'random_id':0})
+									except:
+										vk.method("messages.send", {"peer_id": id, "message": 'При обновлении данных возникла ошибка.', 'keyboard': keyboard3, 'random_id':0})
+								else:
+									vk.method("messages.send", {"peer_id": id, "message": 'У вас нету доступа к этим командам.', 'keyboard': keyboard3, 'random_id':0})
+
+
+							else:
+								vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': keyboard3, 'random_id':0})
 
 						else:
-							vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': keyboard3, 'random_id':0})
+							if body == 'Сменить класс.':
+								cur.execute("UPDATE `uch` SET `klas`= '{}', `stat`= 0 WHERE `id` = {}".format('-', id))
+								con.commit()
 
-					else:
-						if body == 'Сменить класс.':
-							cur.execute("UPDATE `uch` SET `klas`= '{}', `stat`= 0 WHERE `id` = {}".format('-', id))
-							con.commit()
+								vk.method("messages.send", {"peer_id": id, "message": 'Выберай новый класс.', 'keyboard': numb, 'random_id':0})
 
-							vk.method("messages.send", {"peer_id": id, "message": 'Выберай новый класс.', 'keyboard': numb, 'random_id':0})
+							elif body == 'Расписание NEW.':
+								cur.execute("SELECT `klas` FROM `uch` WHERE `id` = {}".format(id))
+								vk.method("messages.send", {"peer_id": id, "message": raspis[cur.fetchall()[0]['klas']], 'keyboard': keyboard4, 'random_id': 0})
 
-						elif body == 'Расписание NEW.':
-							cur.execute("SELECT `klas` FROM `uch` WHERE `id` = {}".format(id))
-							vk.method("messages.send", {"peer_id": id, "message": raspis[cur.fetchall()[0]['klas']], 'keyboard': keyboard4, 'random_id': 0})
+							elif body == 'Включить уведомления.':
+								cur.execute("UPDATE `uch` SET `send`= 0 WHERE `id` = {}".format(id))
+								con.commit()
+								vk.method("messages.send", {"peer_id": id, "message": 'Уведомления включены.', 'keyboard': keyboard3, 'random_id':0})
 
-						elif body == 'Включить уведомления.':
-							cur.execute("UPDATE `uch` SET `send`= 0 WHERE `id` = {}".format(id))
-							con.commit()
-							vk.method("messages.send", {"peer_id": id, "message": 'Уведомления включены.', 'keyboard': keyboard3, 'random_id':0})
+							elif body == 'Обновить звонки, расписание, классы.':
+								cur.execute("SELECT `admin` FROM `uch` WHERE `id` = {}".format(id))
+								if cur.fetchall()[0]['admin'] == 1:
+									try:
+										update_all()
+										vk.method("messages.send", {"peer_id": id, "message": 'Данные успешно обновлены.', 'keyboard': keyboard4, 'random_id':0})
+									except:
+										vk.method("messages.send", {"peer_id": id, "message": 'При обновлении данных возникла ошибка.', 'keyboard': keyboard4, 'random_id':0})
+								else:
+									vk.method("messages.send", {"peer_id": id, "message": 'У вас нету доступа к этим командам.', 'keyboard': keyboard4, 'random_id':0})
 
-						else:
-							vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': keyboard4, 'random_id':0})
-
-		# обновляю базу звонков
-		if ty == 0:
-			worksheet = sh.worksheet("zvon")
-			s = worksheet.col_values(1)[1:]
-			print('zvon base update')
-
-		ty += 1
-		if ty > 240:
-			ty = 0
-		
-
-		# обновляю базу классов
-		if tr == 0:
-			worksheet = sh.worksheet("klass")
-			c1 = worksheet.col_values(1)
-			c2 = worksheet.col_values(2)
-			kl = {}
-
-			for i in range(len(c1)):
-				kl.update([(c1[i], c2[i])])
-
-			keydoards = {}
-
-			numb = VkKeyboard(one_time=True)
-
-			numb.add_button('5', color=VkKeyboardColor.PRIMARY)
-			numb.add_button('6', color=VkKeyboardColor.PRIMARY)
-			numb.add_button('7', color=VkKeyboardColor.PRIMARY)
-			numb.add_line()
-			numb.add_button('8', color=VkKeyboardColor.POSITIVE)
-			numb.add_button('9', color=VkKeyboardColor.POSITIVE)
-			numb.add_button('10', color=VkKeyboardColor.POSITIVE)
-			numb.add_line()
-			numb.add_button('11', color=VkKeyboardColor.PRIMARY)
-
-			numb = numb.get_keyboard()
-			j = []
-			p = 0
-			for i in range(5,12):
-				for y in c1:
-					if str(i) in y:
-						j.append(y)
-
-				key = VkKeyboard(one_time=True)
-
-				for y in j:
-					if p == 3:
-						p = 0
-						key.add_line()
-						key.add_button(y, color=VkKeyboardColor.PRIMARY)
-					else:
-						key.add_button(y, color=VkKeyboardColor.PRIMARY)
-					p += 1
-
-				j = []
-				p = 0
-				keydoards.update([(i, key.get_keyboard())])
-			print('klass base update')
-		tr += 1
-		if tr > 240:
-			tr = 0
-
-		# обновление раписания
-
-		if trasp == 0:
-			raspis = {}
-			for i in kl.values():
-				worksheet = sh.worksheet(i)
-				
-				s = worksheet.col_values(day*4-3)[1:]
-				st = ''
-
-				for t in range(len(s)):
-					if s[t] == '':
-						st += str(t) + ' урока нет\n' 
-					else:
-						st += str(t) + ' урок - ' + s[t] + '\n'
-
-
-				raspis.update([(i, st)])
-			print('raspis base update')
-
-		trasp += 1
-		if trasp > 240:
-			trasp = 0
-
+							else:
+								vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': keyboard4, 'random_id':0})
 
 
 
@@ -322,7 +284,7 @@ while True:
 		print(d)
 		ans = {}
 
-		if (d in s) and (d not in sends):
+		if (d in zv) and (d not in sends):
 			value = datetime.datetime.fromtimestamp(time.time())
 			day = bday[value.strftime('%w')]
 
@@ -382,6 +344,7 @@ while True:
 				"blue": 0.0
 			}})
 					
+			update_all()
 
 		else:
 			time.sleep(0.5)
