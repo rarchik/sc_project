@@ -334,7 +334,7 @@ while True:
 		elif d == '18:00':
 			f = []
 			sends = []
-			for i in range(len(s)):
+			for i in range(len(zv)):
 				f.append([0])
 			worksheet.update('B2:B', f)
 			worksheet.format("B2:B36", {
@@ -345,6 +345,7 @@ while True:
 			}})
 					
 			update_all()
+			time.sleep(60)
 
 		else:
 			time.sleep(0.5)
