@@ -82,10 +82,11 @@ zv = 0
 keydoards = {}
 kl = {}
 raspis = {}
+table = {}
 
 def update_all():
 	
-	global zv, keydoards, kl, raspis
+	global zv, keydoards, kl, raspis, day, table
 
 	# обновление звонков
 
@@ -139,6 +140,12 @@ def update_all():
 
 
 		raspis.update([(i, st)])
+
+	# обновление всех таблиц классов
+
+	for i in sh.worksheets():
+		if i.title != 'шаблон' or i.title != 'klass' or i.title != 'zvon':
+			table.update([(i.title, i.get_all_values())])
 
 	print('all update completed')
 
@@ -293,28 +300,32 @@ while True:
 
 			if worksheet.cell(a.row, 2).value != 1:
 				for u in kl.values():
-					try:
-						worksheet = sh.worksheet(u)
-						a = worksheet.findall(d)
-						
-						if a != []:
-							for i in a:
-								if i.col == (day*4) - 1:
-									a = 'Начался {} урок. {}'.format(worksheet.cell(i.row, i.col-1).value, worksheet.cell(i.row, i.col-2).value)
-									ans.update([(u, a)])
+					
+						a = table[u]
 
-								elif i.col == day*4:
-									a = 'Закончился {} урок.'.format(worksheet.cell(i.row, i.col-2).value)
-									ans.update([(u, a)])
-					except:
-						pass
+						for g in a:
+							for i in range(len(g)):
+								if g[i] == d:
+									try:
+										if i == (day*4) - 2:
+											a = 'Начался {} урок. {}'.format(g[i-1], g[i-2])
+											ans.update([(u, a)])
 
+										elif i == day*4 - 1:
+											a = 'Закончился {} урок.'.format(g[i-2])
+											ans.update([(u, a)])
+									except:
+										pass
 
 				for i in ans.keys():
 					cur.execute("SELECT `id` FROM `uch` WHERE `klas` = '{}' and `send` = 0".format(i))
 
 					for t in cur.fetchall():
-						vk.method("messages.send", {"peer_id": t['id'], "message": ans[i], 'keyboard': keyboard3, 'random_id':0})
+						try:
+							vk.method("messages.send", {"peer_id": t['id'], "message": ans[i], 'keyboard': keyboard3, 'random_id':0})
+							
+						except:
+							pass
 
 				worksheet = sh.worksheet("zvon")
 				a = worksheet.findall(d)[0]
@@ -331,7 +342,7 @@ while True:
 			else:
 				pass
 
-		elif d == '18:00':
+		elif d == '00:10':
 			f = []
 			sends = []
 			for i in range(len(zv)):
