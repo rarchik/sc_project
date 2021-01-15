@@ -340,9 +340,9 @@ while True:
 				}})
 				
 			else:
-				pass
+				sends.append(d)
 
-		elif d == '00:10':
+		elif d == '0:10':
 			f = []
 			sends = []
 			for i in range(len(zv)):
@@ -357,7 +357,6 @@ while True:
 					
 			update_all()
 			time.sleep(60)
-
 		else:
 			time.sleep(0.5)
 
