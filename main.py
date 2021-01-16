@@ -400,5 +400,4 @@ while True:
 			        db='prbd',
 			        charset='utf8',
 			        cursorclass=pymysql.cursors.DictCursor)
-
 			cur = con.cursor()
