@@ -23,7 +23,7 @@ gc = gspread.service_account(filename='mypython-290810-738113f4f59a.json')
 
 sh = gc.open("sc pro")
 
-vk = vk_api.VkApi(token="c8bc30190f06f593629c7d3ece9dd45f6f4bed92cbf86d0f707637f01d78af07ba7245f5e30fea613dc23")
+vk = vk_api.VkApi(token="")
 
 bday = {
 	'0': 7,
@@ -74,6 +74,9 @@ numb = numb.get_keyboard()
 admin_key = VkKeyboard(one_time=True)
 
 admin_key.add_button('Обновить звонки, расписание, классы.', color=VkKeyboardColor.NEGATIVE)
+numb.add_line()
+admin_key.add_button('Сбросить отправленные звонки.', color=VkKeyboardColor.NEGATIVE)
+
 
 admin_key = admin_key.get_keyboard()
 
@@ -86,7 +89,7 @@ table = {}
 
 def update_all():
 	
-	global zv, keydoards, kl, raspis, day, table
+	global zv, keydoards, kl, raspis, day, table, sh
 
 	# обновление звонков
 
@@ -283,6 +286,26 @@ while True:
 								else:
 									vk.method("messages.send", {"peer_id": id, "message": 'У вас нету доступа к этим командам.', 'keyboard': keyboard4, 'random_id':0})
 
+							elif body == 'Сбросить отправленные звонки.':
+								cur.execute("SELECT `admin` FROM `uch` WHERE `id` = {}".format(id))
+								if cur.fetchall()[0]['admin'] == 1:
+									try:
+										f = []
+										sends = []
+										for i in range(len(zv)):
+											f.append([0])
+										worksheet.update('B2:B', f)
+										worksheet.format("B2:B36", {
+										"backgroundColor": {
+											"red": 100.0,
+											"green": 0.0,
+											"blue": 0.0
+										}})
+
+										vk.method("messages.send", {"peer_id": id, "message": 'Сбро выполен успешно.', 'keyboard': keyboard4, 'random_id':0})
+
+									except:
+										vk.method("messages.send", {"peer_id": id, "message": 'Сброс не удался.', 'keyboard': keyboard4, 'random_id':0})
 							else:
 								vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': keyboard4, 'random_id':0})
 
