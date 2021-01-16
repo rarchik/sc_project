@@ -23,7 +23,7 @@ gc = gspread.service_account(filename='mypython-290810-738113f4f59a.json')
 
 sh = gc.open("sc pro")
 
-vk = vk_api.VkApi(token="")
+vk = vk_api.VkApi(token="c8bc30190f06f593629c7d3ece9dd45f6f4bed92cbf86d0f707637f01d78af07ba7245f5e30fea613dc23")
 
 bday = {
 	'0': 7,
@@ -41,7 +41,7 @@ day = bday[value.strftime('%w')]
 keyboard3 = VkKeyboard(one_time=True)
 
 keyboard3.add_button('Сменить класс.', color=VkKeyboardColor.POSITIVE)
-keyboard3.add_button('Расписание NEW.', color=VkKeyboardColor.PRIMARY)
+keyboard3.add_button('Расписание.', color=VkKeyboardColor.PRIMARY)
 keyboard3.add_line()
 keyboard3.add_button('Отключить уведомления.', color=VkKeyboardColor.NEGATIVE)
 
@@ -50,7 +50,7 @@ keyboard3 = keyboard3.get_keyboard()
 keyboard4 = VkKeyboard(one_time=True)
 
 keyboard4.add_button('Сменить класс.', color=VkKeyboardColor.POSITIVE)
-keyboard4.add_button('Расписание NEW.', color=VkKeyboardColor.PRIMARY)
+keyboard4.add_button('Расписание.', color=VkKeyboardColor.PRIMARY)
 keyboard4.add_line()
 keyboard4.add_button('Включить уведомления.', color=VkKeyboardColor.POSITIVE)
 
@@ -226,9 +226,12 @@ while True:
 
 								vk.method("messages.send", {"peer_id": id, "message": 'Выберай новый класс.', 'keyboard': numb, 'random_id':0})
 
-							elif body == 'Расписание NEW.':
+							elif body == 'Расписание.':
 								cur.execute("SELECT `klas` FROM `uch` WHERE `id` = {}".format(id))
-								vk.method("messages.send", {"peer_id": id, "message": raspis[cur.fetchall()[0]['klas']], 'keyboard': keyboard3, 'random_id': 0})
+								try:
+									vk.method("messages.send", {"peer_id": id, "message": raspis[cur.fetchall()[0]['klas']], 'keyboard': keyboard3, 'random_id': 0})
+								except:
+									vk.method("messages.send", {"peer_id": id, "message": 'На сегодня расписания нет.', 'keyboard': keyboard3, 'random_id': 0})
 
 							elif body == 'Отключить уведомления.':
 								cur.execute("UPDATE `uch` SET `send`= 1 WHERE `id` = {}".format(id))
@@ -257,9 +260,12 @@ while True:
 
 								vk.method("messages.send", {"peer_id": id, "message": 'Выберай новый класс.', 'keyboard': numb, 'random_id':0})
 
-							elif body == 'Расписание NEW.':
+							elif body == 'Расписание.':
 								cur.execute("SELECT `klas` FROM `uch` WHERE `id` = {}".format(id))
-								vk.method("messages.send", {"peer_id": id, "message": raspis[cur.fetchall()[0]['klas']], 'keyboard': keyboard4, 'random_id': 0})
+								try:
+									vk.method("messages.send", {"peer_id": id, "message": raspis[cur.fetchall()[0]['klas']], 'keyboard': keyboard4, 'random_id': 0})
+								except:
+									vk.method("messages.send", {"peer_id": id, "message": 'На сегодня расписания нет.', 'keyboard': keyboard4, 'random_id': 0})
 
 							elif body == 'Включить уведомления.':
 								cur.execute("UPDATE `uch` SET `send`= 0 WHERE `id` = {}".format(id))
@@ -363,3 +369,13 @@ while True:
 	except Exception as err:
 		print(err)
 		vk.method("messages.send", {"peer_id": 226178635, "message": err, 'random_id':0})
+
+		if err == '(2006, "MySQL server has gone away (BrokenPipeError(32, \'Broken pipe\'))")':
+			con = pymysql.connect(host='localhost',
+			        user='root',
+			        password='usbw',
+			        db='prbd',
+			        charset='utf8',
+			        cursorclass=pymysql.cursors.DictCursor)
+
+			cur = con.cursor()
