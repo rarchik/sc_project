@@ -23,7 +23,7 @@ gc = gspread.service_account(filename='mypython-290810-738113f4f59a.json')
 
 sh = gc.open("sc pro")
 
-vk = vk_api.VkApi(token="cc260f8c0d828958bd49989cf8d2918c055719aff89d30915e3c5d385d082c6e02587baff084269bd9d46")
+vk = vk_api.VkApi(token="")
 
 bday = {
 	'0': 7,
@@ -129,17 +129,21 @@ def update_all():
 
 	# обновление раписания
 
+	raspis = {}
+
 	for i in kl.values():
 		worksheet = sh.worksheet(i)
 		
 		s = worksheet.col_values(day*4-3)[1:]
-		st = ''
+		time_start = worksheet.col_values(day*4-1)[1:]
+		time_end = worksheet.col_values(day*4)[1:]
 
+		st = ''
 		for t in range(len(s)):
 			if s[t] == '':
 				st += str(t) + ' урока нет\n' 
 			else:
-				st += str(t) + ' урок - ' + s[t] + '\n'
+				st += str(t) + ' урок - ' + s[t] + ', ' + time_start[t] + ' - ' + time_end[t] +'\n'
 
 
 		raspis.update([(i, st)])
