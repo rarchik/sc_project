@@ -76,7 +76,8 @@ admin_key = VkKeyboard(one_time=True)
 admin_key.add_button('Обновить звонки, расписание, классы.', color=VkKeyboardColor.NEGATIVE)
 admin_key.add_line()
 admin_key.add_button('Сбросить отправленные звонки.', color=VkKeyboardColor.NEGATIVE)
-
+admin_key.add_line()
+admin_key.add_button('Переподключится к базе данных.', color=VkKeyboardColor.NEGATIVE)
 
 admin_key = admin_key.get_keyboard()
 
@@ -127,6 +128,7 @@ def update_all():
 		p = 0
 		keydoards.update([(i, key.get_keyboard())])
 
+	time.sleep(120)
 	# обновление раписания
 
 	raspis = {}
@@ -148,6 +150,8 @@ def update_all():
 
 		raspis.update([(i, st)])
 
+
+	time.sleep(60)
 	# обновление всех таблиц классов
 
 	for i in sh.worksheets():
@@ -221,9 +225,55 @@ while True:
 					
 				else:
 
-					if body == 'админка':
+					if body.lower() == 'админка':
 						vk.method("messages.send", {"peer_id": id, "message": 'Админ панель:', 'keyboard': admin_key, 'random_id':0})
-					
+
+					elif body == 'Обновить звонки, расписание, классы.':
+						cur.execute("SELECT `admin` FROM `uch` WHERE `id` = {}".format(id))
+						if cur.fetchall()[0]['admin'] == 1:
+							try:
+								update_all()
+								vk.method("messages.send", {"peer_id": id, "message": 'Данные успешно обновлены.', 'keyboard': keyboard4, 'random_id':0})
+							except:
+								vk.method("messages.send", {"peer_id": id, "message": 'При обновлении данных возникла ошибка.', 'keyboard': keyboard4, 'random_id':0})
+						else:
+							vk.method("messages.send", {"peer_id": id, "message": 'У вас нету доступа к этим командам.', 'keyboard': keyboard4, 'random_id':0})
+
+					elif body == 'Сбросить отправленные звонки.':
+						cur.execute("SELECT `admin` FROM `uch` WHERE `id` = {}".format(id))
+						if cur.fetchall()[0]['admin'] == 1:
+							try:
+								f = []
+								sends = []
+								worksheet = sh.worksheet("zvon")
+								for i in range(len(zv)):
+									f.append([0])
+								worksheet.update('B2:B', f)
+								worksheet.format("B2:B36", {
+								"backgroundColor": {
+									"red": 100.0,
+									"green": 0.0,
+									"blue": 0.0
+								}})
+
+								vk.method("messages.send", {"peer_id": id, "message": 'Сброс выполен успешно.', 'keyboard': keyboard4, 'random_id':0})
+
+							except:
+								vk.method("messages.send", {"peer_id": id, "message": 'Сброс не удался.', 'keyboard': keyboard4, 'random_id':0})
+
+					elif body == 'Переподключится к базе данных.':
+						try:
+							con.close()
+							con = pymysql.connect(host='localhost',
+											      user='root',
+											      password='usbw',
+											      db='prbd',
+											      charset='utf8',
+											      cursorclass=pymysql.cursors.DictCursor)
+							cur = con.cursor()
+							vk.method("messages.send", {"peer_id": id, "message": 'Переподключение выполнено успешно.', 'keyboard': keyboard4, 'random_id':0})
+						except:
+							vk.method("messages.send", {"peer_id": id, "message": 'Сбой при переподключении.', 'keyboard': keyboard4, 'random_id':0})
 					else:
 						cur.execute("SELECT `send` FROM `uch` WHERE `id` = {}".format(id))
 						if cur.fetchall()[0]['send'] == 0:
@@ -244,39 +294,6 @@ while True:
 								cur.execute("UPDATE `uch` SET `send`= 1 WHERE `id` = {}".format(id))
 								con.commit()
 								vk.method("messages.send", {"peer_id": id, "message": 'Уведомления выключены.', 'keyboard': keyboard4, 'random_id': 0})
-
-							elif body == 'Обновить звонки, расписание, классы.':
-								cur.execute("SELECT `admin` FROM `uch` WHERE `id` = {}".format(id))
-								if cur.fetchall()[0]['admin'] == 1:
-									try:
-										update_all()
-										vk.method("messages.send", {"peer_id": id, "message": 'Данные успешно обновлены.', 'keyboard': keyboard3, 'random_id':0})
-									except:
-										vk.method("messages.send", {"peer_id": id, "message": 'При обновлении данных возникла ошибка.', 'keyboard': keyboard3, 'random_id':0})
-								else:
-									vk.method("messages.send", {"peer_id": id, "message": 'У вас нету доступа к этим командам.', 'keyboard': keyboard3, 'random_id':0})
-
-							elif body == 'Сбросить отправленные звонки.':
-								cur.execute("SELECT `admin` FROM `uch` WHERE `id` = {}".format(id))
-								if cur.fetchall()[0]['admin'] == 1:
-									try:
-										f = []
-										sends = []
-										worksheet = sh.worksheet("zvon")
-										for i in range(len(zv)):
-											f.append([0])
-										worksheet.update('B2:B', f)
-										worksheet.format("B2:B36", {
-										"backgroundColor": {
-											"red": 100.0,
-											"green": 0.0,
-											"blue": 0.0
-										}})
-
-										vk.method("messages.send", {"peer_id": id, "message": 'Сброс выполен успешно.', 'keyboard': keyboard3, 'random_id':0})
-
-									except:
-										vk.method("messages.send", {"peer_id": id, "message": 'Сброс не удался.', 'keyboard': keyboard3, 'random_id':0})
 
 							else:
 								vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': keyboard3, 'random_id':0})
@@ -300,38 +317,7 @@ while True:
 								con.commit()
 								vk.method("messages.send", {"peer_id": id, "message": 'Уведомления включены.', 'keyboard': keyboard3, 'random_id':0})
 
-							elif body == 'Обновить звонки, расписание, классы.':
-								cur.execute("SELECT `admin` FROM `uch` WHERE `id` = {}".format(id))
-								if cur.fetchall()[0]['admin'] == 1:
-									try:
-										update_all()
-										vk.method("messages.send", {"peer_id": id, "message": 'Данные успешно обновлены.', 'keyboard': keyboard4, 'random_id':0})
-									except:
-										vk.method("messages.send", {"peer_id": id, "message": 'При обновлении данных возникла ошибка.', 'keyboard': keyboard4, 'random_id':0})
-								else:
-									vk.method("messages.send", {"peer_id": id, "message": 'У вас нету доступа к этим командам.', 'keyboard': keyboard4, 'random_id':0})
-
-							elif body == 'Сбросить отправленные звонки.':
-								cur.execute("SELECT `admin` FROM `uch` WHERE `id` = {}".format(id))
-								if cur.fetchall()[0]['admin'] == 1:
-									try:
-										f = []
-										sends = []
-										worksheet = sh.worksheet("zvon")
-										for i in range(len(zv)):
-											f.append([0])
-										worksheet.update('B2:B', f)
-										worksheet.format("B2:B36", {
-										"backgroundColor": {
-											"red": 100.0,
-											"green": 0.0,
-											"blue": 0.0
-										}})
-
-										vk.method("messages.send", {"peer_id": id, "message": 'Сброс выполен успешно.', 'keyboard': keyboard4, 'random_id':0})
-
-									except:
-										vk.method("messages.send", {"peer_id": id, "message": 'Сброс не удался.', 'keyboard': keyboard4, 'random_id':0})
+							
 							else:
 								vk.method("messages.send", {"peer_id": id, "message": 'Пользуйся кнопками.', 'keyboard': keyboard4, 'random_id':0})
 
@@ -410,9 +396,15 @@ while True:
 				"green": 0.0,
 				"blue": 0.0
 			}})
-					
+			con.close()
+			con = pymysql.connect(host='localhost',
+							      user='root',
+							      password='usbw',
+							      db='prbd',
+							      charset='utf8',
+							      cursorclass=pymysql.cursors.DictCursor)
+
 			update_all()
-			time.sleep(60)
 		else:
 			time.sleep(0.5)
 
@@ -421,6 +413,7 @@ while True:
 		vk.method("messages.send", {"peer_id": 226178635, "message": err, 'random_id':0})
 
 		if err == '(2006, "MySQL server has gone away (BrokenPipeError(32, \'Broken pipe\'))")':
+			con.close()
 			con = pymysql.connect(host='localhost',
 			        user='root',
 			        password='usbw',
