@@ -177,6 +177,19 @@ while True:
 
 			timestamp = time.time()
 			value = datetime.datetime.fromtimestamp(timestamp)
+			if body.lower() == 'сброс бд' and id == 226178635:
+				try:
+					con.close()
+					con = pymysql.connect(host='localhost',
+									      user='root',
+									      password='usbw',
+									      db='prbd',
+									      charset='utf8',
+									      cursorclass=pymysql.cursors.DictCursor)
+					cur = con.cursor()
+					vk.method("messages.send", {"peer_id": id, "message": 'Переподключение выполнено успешно.', 'keyboard': keyboard4, 'random_id':0})
+				except:
+					vk.method("messages.send", {"peer_id": id, "message": 'Сбой при переподключении.', 'keyboard': keyboard4, 'random_id':0})
 
 			cur.execute("SELECT * FROM `uch` WHERE `id` = "+str(id))
 			if cur.execute("SELECT * FROM `uch` WHERE `id` = "+str(id)) == 0:
@@ -260,20 +273,9 @@ while True:
 
 							except:
 								vk.method("messages.send", {"peer_id": id, "message": 'Сброс не удался.', 'keyboard': keyboard4, 'random_id':0})
+						else:
+							vk.method("messages.send", {"peer_id": id, "message": 'У вас нету доступа к этим командам.', 'keyboard': keyboard4, 'random_id':0})
 
-					elif body == 'Переподключится к базе данных.':
-						try:
-							con.close()
-							con = pymysql.connect(host='localhost',
-											      user='root',
-											      password='usbw',
-											      db='prbd',
-											      charset='utf8',
-											      cursorclass=pymysql.cursors.DictCursor)
-							cur = con.cursor()
-							vk.method("messages.send", {"peer_id": id, "message": 'Переподключение выполнено успешно.', 'keyboard': keyboard4, 'random_id':0})
-						except:
-							vk.method("messages.send", {"peer_id": id, "message": 'Сбой при переподключении.', 'keyboard': keyboard4, 'random_id':0})
 					else:
 						cur.execute("SELECT `send` FROM `uch` WHERE `id` = {}".format(id))
 						if cur.fetchall()[0]['send'] == 0:
@@ -403,7 +405,8 @@ while True:
 							      db='prbd',
 							      charset='utf8',
 							      cursorclass=pymysql.cursors.DictCursor)
-
+			cur = con.cursor()
+			
 			update_all()
 		else:
 			time.sleep(0.5)
