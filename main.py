@@ -10,12 +10,16 @@ import pymysql
 import pymysql.cursors
 import gspread
 
+db_log = 'root'
+db_pas = 'usbw'
+
+
 con = pymysql.connect(host='localhost',
-        user='root',
-        password='usbw',
-        db='prbd',
-        charset='utf8',
-        cursorclass=pymysql.cursors.DictCursor)
+        user =db_log,
+        password= db_pas,
+        db= 'prbd',
+        charset= 'utf8',
+        cursorclass= pymysql.cursors.DictCursor)
 
 cur = con.cursor()
 
@@ -181,8 +185,8 @@ while True:
 				try:
 					con.close()
 					con = pymysql.connect(host='localhost',
-									      user='root',
-									      password='usbw',
+									      user=db_log,
+									      password=db_pas,
 									      db='prbd',
 									      charset='utf8',
 									      cursorclass=pymysql.cursors.DictCursor)
@@ -400,8 +404,8 @@ while True:
 			}})
 			con.close()
 			con = pymysql.connect(host='localhost',
-							      user='root',
-							      password='usbw',
+							      user=db_log,
+							      password=db_pas,
 							      db='prbd',
 							      charset='utf8',
 							      cursorclass=pymysql.cursors.DictCursor)
@@ -418,8 +422,8 @@ while True:
 		if err == '(2006, "MySQL server has gone away (BrokenPipeError(32, \'Broken pipe\'))")':
 			con.close()
 			con = pymysql.connect(host='localhost',
-			        user='root',
-			        password='usbw',
+			        user=db_log,
+			        password=db_pas,
 			        db='prbd',
 			        charset='utf8',
 			        cursorclass=pymysql.cursors.DictCursor)
